@@ -17,6 +17,8 @@ impl Plugin for TanksPlugin {
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     let mut projection = OrthographicProjection::default();
     projection.scaling_mode = ScalingMode::FixedVertical(20.0);
+    projection.near = -1000.0;
+    projection.far = 1000.0;
     commands.spawn(Camera2dBundle {
         projection,
         ..Default::default()
@@ -138,7 +140,7 @@ fn reload_tank_guns(time: Res<Time>, mut q: Query<&mut TankGun>) {
 
 const MAX_TANK_SPEED: f32 = 2.0;
 const TANK_ACCLERATION: f32 = 6.0;
-const BULLET_SHOOT_SPEED: f32 = 0.1;
+const BULLET_SHOOT_SPEED: f32 = 18.0;
 const TANK_BRAKING: f32 = 4.0;
 const TANK_ROTATE_RATE_DEGS: f32 = 140.0f32;
 const GUN_ROTATE_RATE_DEGS: f32 = 220.0f32;

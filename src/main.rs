@@ -15,7 +15,7 @@ fn main() {
         ))
         .add_plugins((
             RapierPhysicsPlugin::<NoUserData>::default().with_physics_scale(1.0),
-            RapierDebugRenderPlugin::default(),
+            //RapierDebugRenderPlugin::default(),
         ))
         .run();
 }

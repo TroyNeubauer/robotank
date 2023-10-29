@@ -1,18 +1,15 @@
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
-#[derive(Component)]
-struct Bullet {
-    shooter: Entity,
+#[derive(Clone, Component, Debug)]
+pub struct Bullet {
+    pub shooter: Entity,
 }
-
-#[derive(Resource)]
-pub struct BulletAsset(pub Handle<Image>);
 
 pub fn spawn_bullet(
     commands: &mut Commands,
+    materials: &Res<crate::Materials>,
     tank: Entity,
-    bullet: &Res<BulletAsset>,
     size: Vec2,
     pos: Vec2,
     vel: Vec2,
@@ -22,7 +19,7 @@ pub fn spawn_bullet(
             custom_size: Some(size),
             ..Default::default()
         },
-        texture: bullet.0.clone(),
+        texture: materials.bullet.clone(),
         transform: Transform::from_xyz(pos.x, pos.y, 0.0),
         ..Default::default()
     });
@@ -35,6 +32,7 @@ pub fn spawn_bullet(
         })
         .insert(Collider::cuboid(size.x / 2.0, size.y / 2.0))
         .insert(ColliderMassProperties::Density(3.0))
+        .insert(ActiveEvents::COLLISION_EVENTS)
         // XY plane is flat base, no gravity
         .insert(GravityScale(0.0))
         .insert(Bullet { shooter: tank });

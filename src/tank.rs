@@ -1,96 +1,37 @@
-use crate::BulletAsset;
-use bevy::{prelude::*, render::camera::ScalingMode, window::PrimaryWindow};
+use bevy::{prelude::*, window::PrimaryWindow};
 use bevy_rapier2d::prelude::*;
 use std::f32::consts::{PI, SQRT_2};
 
-pub struct TanksPlugin;
+#[derive(Clone, Component, Debug)]
+pub struct TankGun {
+    timer: Timer,
+    ammo: usize,
+    max_ammo: usize,
+}
 
-impl Plugin for TanksPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup);
-        app.add_systems(Update, update_tank_body_input_system);
-        app.add_systems(Update, update_tank_gun_input_system);
-        app.add_systems(Update, reload_tank_guns);
+impl TankGun {
+    pub fn new(max_ammo: usize) -> Self {
+        Self {
+            timer: Timer::from_seconds(1.0, TimerMode::Repeating),
+            ammo: max_ammo,
+            max_ammo,
+        }
     }
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let mut projection = OrthographicProjection::default();
-    projection.scaling_mode = ScalingMode::FixedVertical(20.0);
-    projection.near = -1000.0;
-    projection.far = 1000.0;
-    commands.spawn(Camera2dBundle {
-        projection,
-        ..Default::default()
-    });
-    create_tank(&mut commands, &asset_server, Vec2::new(2.0, 2.0), true);
-    create_tank(&mut commands, &asset_server, Vec2::new(-5.0, 0.0), false);
-
-    commands.insert_resource(BulletAsset(asset_server.load("bullet.png")));
+#[derive(Clone, Component, Debug)]
+pub struct TankBody {
+    // Tanks can only move forward or backward, this is the current speed, positive for forward
+    pub speed: f32,
+    pub name: String,
 }
 
-fn create_tank(
-    commands: &mut Commands,
-    asset_server: &Res<AssetServer>,
-    position: Vec2,
-    player_controlled: bool,
-) {
-    let tank = {
-        let size = Vec2::new(1.0, 1.0);
-        let mut tank = commands.spawn(SpriteBundle {
-            sprite: Sprite {
-                custom_size: Some(size),
-                ..Default::default()
-            },
-            texture: asset_server.load("tank_base.png"),
-            transform: Transform::from_xyz(position.x, position.y, 0.0),
-            ..Default::default()
-        });
-
-        tank.insert(TankBody { speed: 0.0 })
-            .insert(RigidBody::Dynamic)
-            .insert(Velocity {
-                linvel: Vec2::new(0.0, 0.0),
-                angvel: 0.0,
-            })
-            .insert(Collider::cuboid(size.x / 2.0, size.y / 2.0))
-            .insert(ColliderMassProperties::Density(20.0))
-            // XY plane is flat base, no gravity
-            .insert(GravityScale(0.0))
-            .insert(Damping {
-                linear_damping: 1.5,
-                angular_damping: 5.0,
-            });
-
-        if player_controlled {
-            tank.insert(PlayerControlled);
-        }
-        tank.id()
-    };
-
-    let gun = {
-        let mut gun = commands.spawn(SpriteBundle {
-            sprite: Sprite {
-                custom_size: Some(Vec2::new(619.0 / 300.0, 188.0 / 300.0)),
-                ..Default::default()
-            },
-            texture: asset_server.load("tank_gun.png"),
-            transform: Transform::from_xyz(0.0, 0.0, 0.0),
-            ..Default::default()
-        });
-        gun.insert(TankGun::new(5));
-
-        if player_controlled {
-            gun.insert(PlayerControlled);
-        }
-        gun.id()
-    };
-
-    commands.entity(tank).push_children(&[gun]);
-}
+/// This entity should obtain its input from keyboard / mouse
+#[derive(Clone, Component, Debug)]
+pub struct PlayerControlled;
 
 /// Input actions to tank, produced by user input or the AI
-struct TankBodyInput {
+pub struct TankBodyInput {
     /// (0..1) strength of forward action
     forward: f32,
     /// (0..1) strength of backward action
@@ -99,7 +40,7 @@ struct TankBodyInput {
     rotate: f32,
 }
 
-struct TankGunInput {
+pub struct TankGunInput {
     /// Desired gun angle (radians)
     gun_angle: f32,
     /// True if shooting the gun is desired this update
@@ -129,11 +70,71 @@ fn get_rotz(transform: &Transform) -> f32 {
     transform.rotation.to_euler(EulerRot::XYZ).2
 }
 
+pub fn spawn_tank(
+    commands: &mut Commands,
+    materials: &Res<crate::Materials>,
+    position: Vec2,
+    name: String,
+    player_controlled: bool,
+) {
+    let tank = {
+        let size = Vec2::new(1.0, 1.0);
+        let mut tank = commands.spawn(SpriteBundle {
+            sprite: Sprite {
+                custom_size: Some(size),
+                ..Default::default()
+            },
+            texture: materials.tank_base.clone(),
+            transform: Transform::from_xyz(position.x, position.y, 0.0),
+            ..Default::default()
+        });
+
+        tank.insert(TankBody { speed: 0.0, name })
+            .insert(RigidBody::Dynamic)
+            .insert(Velocity {
+                linvel: Vec2::new(0.0, 0.0),
+                angvel: 0.0,
+            })
+            .insert(Collider::cuboid(size.x / 2.0, size.y / 2.0))
+            .insert(ColliderMassProperties::Density(20.0))
+            // XY plane is flat base, no gravity
+            .insert(GravityScale(0.0))
+            .insert(Damping {
+                linear_damping: 1.5,
+                angular_damping: 5.0,
+            });
+
+        if player_controlled {
+            tank.insert(PlayerControlled);
+        }
+        tank.id()
+    };
+
+    let gun = {
+        let mut gun = commands.spawn(SpriteBundle {
+            sprite: Sprite {
+                custom_size: Some(Vec2::new(619.0 / 300.0, 188.0 / 300.0)),
+                ..Default::default()
+            },
+            texture: materials.tank_gun.clone(),
+            transform: Transform::from_xyz(0.0, 0.0, 0.0),
+            ..Default::default()
+        });
+        gun.insert(TankGun::new(5));
+
+        if player_controlled {
+            gun.insert(PlayerControlled);
+        }
+        gun.id()
+    };
+
+    commands.entity(tank).push_children(&[gun]);
+}
+
 fn reload_tank_guns(time: Res<Time>, mut q: Query<&mut TankGun>) {
     for mut gun in &mut q {
         if gun.timer.tick(time.delta()).just_finished() {
-            gun.ammo += 1;
-            gun.ammo = gun.ammo.clamp(0, gun.max_ammo);
+            gun.ammo = (gun.ammo + 1).clamp(0, gun.max_ammo);
         }
     }
 }
@@ -147,7 +148,7 @@ const GUN_ROTATE_RATE_DEGS: f32 = 220.0f32;
 
 fn update_tank_gun_input(
     commands: &mut Commands,
-    bullet_asset: &Res<BulletAsset>,
+    materials: &Res<crate::Materials>,
     time: &Res<Time>,
     input: &TankGunInput,
     local: &mut Transform,
@@ -160,13 +161,18 @@ fn update_tank_gun_input(
 
     let desired = Quat::from_rotation_z(input.gun_angle);
     let gun_angle = get_rotz(&transform);
-    let error2 = transform.rotation.angle_between(desired);
+    let angular_error = transform.rotation.angle_between(desired);
+    let angular_error = if angular_error.is_nan() {
+        0.0
+    } else {
+        angular_error
+    };
 
     // How many radians should we step closer to `desired` this update
     let scalar_step = GUN_ROTATE_RATE_DEGS.to_radians() * time.delta_seconds();
 
     // interpolation factor between our current rotation and desired
-    let f = (scalar_step / error2).clamp(0.0, 1.0);
+    let f = (scalar_step / angular_error).clamp(0.0, 1.0);
     // the global rotation we want this update
     let rotated = transform.rotation.lerp(desired, f);
 
@@ -174,7 +180,9 @@ fn update_tank_gun_input(
     let step = rotated * transform.rotation.inverse();
 
     // apply rotation
-    local.rotate(step);
+    if !step.is_nan() {
+        local.rotate(step);
+    }
 
     if input.shoot {
         if gun.ammo > 0 {
@@ -202,8 +210,8 @@ fn update_tank_gun_input(
 
             crate::spawn_bullet(
                 commands,
+                materials,
                 tank_entity,
-                bullet_asset,
                 bullet_size,
                 bullet_pos,
                 bullet_velocity,
@@ -275,7 +283,7 @@ fn update_tank_body_input_system(
 
 fn update_tank_gun_input_system(
     mut commands: Commands,
-    bullet: Res<BulletAsset>,
+    materials: Res<crate::Materials>,
     time: Res<Time>,
     window: Query<&Window, With<PrimaryWindow>>,
     buttons: Res<Input<MouseButton>>,
@@ -309,7 +317,7 @@ fn update_tank_gun_input_system(
 
         update_tank_gun_input(
             &mut commands,
-            &bullet,
+            &materials,
             &time,
             &input,
             &mut local,
@@ -321,29 +329,8 @@ fn update_tank_gun_input_system(
     }
 }
 
-#[derive(Component)]
-struct TankGun {
-    timer: Timer,
-    ammo: usize,
-    max_ammo: usize,
+pub fn init_tank_systems(app: &mut App) {
+    app.add_systems(Update, update_tank_body_input_system);
+    app.add_systems(Update, update_tank_gun_input_system);
+    app.add_systems(Update, reload_tank_guns);
 }
-
-impl TankGun {
-    pub fn new(max_ammo: usize) -> Self {
-        Self {
-            timer: Timer::from_seconds(1.0, TimerMode::Repeating),
-            ammo: max_ammo,
-            max_ammo,
-        }
-    }
-}
-
-#[derive(Component)]
-struct TankBody {
-    // Tanks can only move forward or backward, this is the current speed, positive for forward
-    speed: f32,
-}
-
-/// This entity should obtain its input from keyboard / mouse
-#[derive(Component)]
-struct PlayerControlled;

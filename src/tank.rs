@@ -66,7 +66,7 @@ impl TankGunInput {
     }
 }
 
-fn get_rotz(transform: &Transform) -> f32 {
+pub fn get_rotz(transform: &Transform) -> f32 {
     transform.rotation.to_euler(EulerRot::XYZ).2
 }
 
@@ -76,7 +76,7 @@ pub fn spawn_tank(
     position: Vec2,
     name: String,
     player_controlled: bool,
-) {
+) -> Entity {
     let tank = {
         let size = Vec2::new(1.0, 1.0);
         let mut tank = commands.spawn(SpriteBundle {
@@ -129,6 +129,8 @@ pub fn spawn_tank(
     };
 
     commands.entity(tank).push_children(&[gun]);
+
+    tank
 }
 
 fn reload_tank_guns(time: Res<Time>, mut q: Query<&mut TankGun>) {
@@ -297,9 +299,13 @@ fn update_tank_gun_input_system(
     q_camera: Query<(&Camera, &GlobalTransform)>,
     q_collider: Query<&Collider>,
 ) {
-    let (camera, camera_transform) = q_camera.single();
+    let Ok((camera, camera_transform)) = q_camera.get_single() else {
+        return;
+    };
 
-    let cursor_pos = window.single().cursor_position();
+    let Ok(cursor_pos) = window.get_single().map(|w| w.cursor_position()) else {
+        return;
+    };
     for (mut local, global, mut gun, parent, _) in &mut q_gun {
         let tank_pos = global.translation();
         let gun_angle = cursor_pos

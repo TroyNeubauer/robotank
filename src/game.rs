@@ -3,6 +3,23 @@ use std::time::Duration;
 use bevy::{ecs::query::ReadOnlyWorldQuery, prelude::*, render::camera::ScalingMode};
 use bevy_rapier2d::prelude::*;
 
+#[derive(Resource)]
+pub struct Materials {
+    pub bullet: Handle<Image>,
+    pub tank_base: Handle<Image>,
+    pub tank_gun: Handle<Image>,
+    pub explosion: Handle<TextureAtlas>,
+    pub wall_material: Handle<ColorMaterial>,
+}
+
+#[derive(Component)]
+struct AnimatedSpriteSheet {
+    first: usize,
+    last: usize,
+    timer: Timer,
+    despawn_on_end: bool,
+}
+
 pub struct TanksPlugin;
 
 impl Plugin for TanksPlugin {
@@ -10,6 +27,7 @@ impl Plugin for TanksPlugin {
         app.add_systems(PreStartup, load_materials);
         app.add_systems(PostStartup, start_game);
         app.add_systems(Update, animate_sprite);
+        app.add_systems(PostUpdate, sync_player_camera);
 
         crate::init_tank_systems(app);
     }
@@ -37,27 +55,28 @@ fn load_materials(
     });
 }
 
-fn start_game(
-    mut commands: Commands,
-    materials: Res<Materials>,
-    mut meshes: ResMut<Assets<Mesh>>,
-) {
+fn start_game(mut commands: Commands, materials: Res<Materials>, mut meshes: ResMut<Assets<Mesh>>) {
     let mut projection = OrthographicProjection::default();
     projection.scaling_mode = ScalingMode::FixedVertical(20.0);
     projection.near = -1000.0;
     projection.far = 1000.0;
-    commands.spawn(Camera2dBundle {
-        projection,
-        ..Default::default()
-    });
 
-    crate::spawn_tank(
+    let camera = commands
+        .spawn(Camera2dBundle {
+            projection,
+            ..Default::default()
+        })
+        .id();
+
+    let player = crate::spawn_tank(
         &mut commands,
         &materials,
         Vec2::new(2.0, 2.0),
         "Troy".into(),
         true,
     );
+
+    commands.entity(player).add_child(camera);
 
     crate::spawn_tank(
         &mut commands,
@@ -85,13 +104,21 @@ fn start_game(
     commands.spawn(map);
 }
 
-#[derive(Resource)]
-pub struct Materials {
-    pub bullet: Handle<Image>,
-    pub tank_base: Handle<Image>,
-    pub tank_gun: Handle<Image>,
-    pub explosion: Handle<TextureAtlas>,
-    pub wall_material: Handle<ColorMaterial>,
+pub fn sync_player_camera(
+    mut camera: Query<(&Parent, &mut Transform), With<Camera>>,
+    q_parent: Query<&GlobalTransform>,
+) {
+    let Ok((player, mut camera)) = camera.get_single_mut() else {
+        return;
+    };
+    let Ok(p) = q_parent.get(player.get()) else {
+        return;
+    };
+
+    let t = p.compute_transform();
+    let r = crate::get_rotz(&t);
+    dbg!(r);
+    camera.rotation = Quat::from_rotation_z(-r);
 }
 
 pub fn display_events(
@@ -147,14 +174,6 @@ where
     }
 
     Err(())
-}
-
-#[derive(Component)]
-struct AnimatedSpriteSheet {
-    first: usize,
-    last: usize,
-    timer: Timer,
-    despawn_on_end: bool,
 }
 
 fn animate_sprite(

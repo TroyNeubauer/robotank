@@ -31,8 +31,48 @@ impl MapBundle {
         tiles: MapTiles,
     ) -> Self {
         let mut triangle = Mesh::new(PrimitiveTopology::TriangleList);
-        let verticies = vec![[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]];
-        let indices = vec![2, 1, 0];
+
+        let mut verticies = vec![];
+        let mut indices = vec![];
+        let mut shapes: Vec<(Vect, Rot, Collider)> = vec![];
+
+        let mut add_square = |pos: Vec2| {
+            let i = verticies.len() as u32;
+
+            verticies.push([pos.x + 1.0, pos.y + 1.0, 0.0]);
+            verticies.push([pos.x + 0.0, pos.y + 1.0, 0.0]);
+            verticies.push([pos.x + 1.0, pos.y + 0.0, 0.0]);
+            verticies.push([pos.x + 0.0, pos.y + 0.0, 0.0]);
+
+            indices.push(i + 0);
+            indices.push(i + 1);
+            indices.push(i + 2);
+
+            indices.push(i + 2);
+            indices.push(i + 1);
+            indices.push(i + 3);
+
+            shapes.push((pos + Vec2::new(0.5, 0.5), 0.0, Collider::cuboid(0.5, 0.5)));
+        };
+
+        for x in (-1)..tiles.0.column_len() as isize {
+            add_square(Vec2::new(x as f32, -1.0));
+            add_square(Vec2::new(x as f32 + 1.0, tiles.0.row_len() as f32));
+        }
+
+        for y in (-1)..tiles.0.row_len() as isize {
+            add_square(Vec2::new(-1.0, y as f32 + 1.0));
+            add_square(Vec2::new(tiles.0.column_len() as f32, y as f32));
+        }
+
+        for ((y, x), tile) in tiles.0.enumerate_row_major() {
+            match tile {
+                Tile::Air => {}
+                Tile::Wall => {
+                    add_square(Vec2::new(x as f32, y as f32));
+                }
+            }
+        }
 
         triangle.insert_attribute(Mesh::ATTRIBUTE_POSITION, verticies.clone());
         /*triangle.insert_attribute(
@@ -40,23 +80,10 @@ impl MapBundle {
             vec![[0.0, 1.0], [1.0, 0.0], [1.0, 1.0]],
         );*/
 
-        triangle.set_indices(Some(Indices::U32(indices)));
-
-        let indices2d: Vec<_> = (0..(verticies.len() - 1))
-            .enumerate()
-            .map(|(i, _)| [i as u32, i as u32 + 1])
-            .chain(Some([verticies.len() as u32 - 1, 0]))
-            .collect();
-
-        let verticies2d: Vec<_> = verticies
-            .into_iter()
-            .map(|v| Vec2::new(v[0], v[1]))
-            .collect();
-
-        dbg!(&indices2d, &verticies2d);
+        triangle.set_indices(Some(Indices::U32(indices.clone())));
 
         Self {
-            collider: Collider::convex_decomposition(&verticies2d, &indices2d),
+            collider: Collider::compound(shapes),
             mesh: MaterialMesh2dBundle {
                 mesh: meshes.add(triangle).into(),
                 transform: Transform::from_xyz(0.0, 0.0, 0.0),

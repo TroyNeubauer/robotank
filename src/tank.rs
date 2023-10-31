@@ -259,6 +259,29 @@ fn update_tank_body_input(
     vel.linvel = Vec2::from_angle(rotation) * body.speed;
 }
 
+pub fn sync_player_camera(
+    mut q_camera: Query<(
+        &mut Transform,
+        With<Camera2d>,
+        Without<crate::PlayerControlled>,
+    )>,
+    q_player: Query<(
+        &mut Transform,
+        With<crate::TankBody>,
+        With<crate::PlayerControlled>,
+    )>,
+) {
+    let Ok((mut camera, (), ())) = q_camera.get_single_mut() else {
+        return;
+    };
+
+    let Ok((player, (), ())) = q_player.get_single() else {
+        return;
+    };
+
+    camera.translation = player.translation;
+}
+
 fn update_tank_body_input_system(
     time: Res<Time>,
     keys: Res<Input<KeyCode>>,
@@ -339,4 +362,5 @@ pub fn init_tank_systems(app: &mut App) {
     app.add_systems(Update, update_tank_body_input_system);
     app.add_systems(Update, update_tank_gun_input_system);
     app.add_systems(Update, reload_tank_guns);
+    app.add_systems(PostUpdate, sync_player_camera);
 }

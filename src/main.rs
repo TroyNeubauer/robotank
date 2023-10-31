@@ -10,6 +10,9 @@ pub use bullet::*;
 mod game;
 pub use game::*;
 
+mod map;
+pub use map::*;
+
 fn main() {
     let debug_physics = false;
     let mut app = App::new();

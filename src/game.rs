@@ -95,7 +95,10 @@ fn start_game(mut commands: Commands, materials: Res<Materials>, mut meshes: Res
         false,
     );
 
-    let map = crate::MapBundle::new_empty(&materials, &mut meshes, IVec2::new(10, 10));
+    let mut tiles = crate::MapTiles::new_empty(IVec2::new(20, 10));
+    tiles[(0, 0)] = crate::Tile::Wall;
+
+    let map = crate::MapBundle::new_from_tiles(&materials, &mut meshes, tiles);
     commands.spawn(map);
 }
 

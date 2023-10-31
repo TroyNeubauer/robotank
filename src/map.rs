@@ -22,10 +22,10 @@ impl MapBundle {
         meshes: &mut ResMut<Assets<Mesh>>,
         size: IVec2,
     ) -> Self {
-        Self::new_from_mesh(materials, meshes, MapTiles::new_empty(size))
+        Self::new_from_tiles(materials, meshes, MapTiles::new_empty(size))
     }
 
-    fn new_from_mesh(
+    pub fn new_from_tiles(
         materials: &Res<crate::Materials>,
         meshes: &mut ResMut<Assets<Mesh>>,
         tiles: MapTiles,
@@ -96,19 +96,19 @@ impl MapBundle {
 }
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
-enum Tile {
+pub enum Tile {
     Air,
     Wall,
 }
 
-struct MapTiles(Array2D<Tile>);
+pub struct MapTiles(Array2D<Tile>);
 
 impl MapTiles {
     pub fn new_empty(size: IVec2) -> Self {
         Self(Array2D::filled_with(
             Tile::Air,
-            size.y as usize,
             size.x as usize,
+            size.y as usize,
         ))
     }
 }

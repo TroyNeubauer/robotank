@@ -6,9 +6,9 @@ use bevy::{
 };
 use bevy_rapier2d::prelude::*;
 
-#[derive(Clone, Component)]
+#[derive(Clone, Bundle)]
 pub struct MapBundle {
-    //collider: Collider,
+    collider: Collider,
     mesh: MaterialMesh2dBundle<ColorMaterial>,
     map: Map,
 }
@@ -32,7 +32,7 @@ impl MapBundle {
     ) -> Self {
         let mut triangle = Mesh::new(PrimitiveTopology::TriangleList);
         let verticies = vec![[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]];
-        let indices = vec![0, 1, 2];
+        let indices = vec![2, 1, 0];
 
         triangle.insert_attribute(Mesh::ATTRIBUTE_POSITION, verticies.clone());
         /*triangle.insert_attribute(
@@ -56,7 +56,7 @@ impl MapBundle {
         dbg!(&indices2d, &verticies2d);
 
         Self {
-            //collider: Collider::convex_decomposition(&verticies2d, &indices2d),
+            collider: Collider::convex_decomposition(&verticies2d, &indices2d),
             mesh: MaterialMesh2dBundle {
                 mesh: meshes.add(triangle).into(),
                 transform: Transform::from_xyz(0.0, 0.0, 0.0),

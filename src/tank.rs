@@ -78,7 +78,7 @@ pub fn spawn_tank(
     player_controlled: bool,
 ) -> Entity {
     let tank = {
-        let size = Vec2::new(1.0, 1.0);
+        let size = Vec2::new(0.9, 0.9);
         let mut tank = commands.spawn(SpriteBundle {
             sprite: Sprite {
                 custom_size: Some(size),

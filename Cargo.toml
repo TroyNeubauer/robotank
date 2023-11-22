@@ -3,10 +3,18 @@ name = "robotank"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["dynamic_linking"]
+dynamic_linking = ["bevy/dynamic_linking"]
+
 [dependencies]
 array2d = "0.3.0"
-bevy = { version = "0.11.0", features = ["dynamic_linking"] }
+bevy = { version = "0.11.0" }
 bevy_rapier2d = { version = "*", features = [ "simd-stable", "debug-render-2d" ] }
+pathfinding = "4.3.2"
+rand = "0.8.5"
+rand_chacha = "0.3.1"
+smallvec = "1.11.2"
 
 [profile.dev]
 opt-level = 1

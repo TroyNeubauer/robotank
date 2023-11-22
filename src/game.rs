@@ -95,10 +95,22 @@ fn start_game(mut commands: Commands, materials: Res<Materials>, mut meshes: Res
         false,
     );
 
-    let mut tiles = crate::MapTiles::new_empty(IVec2::new(20, 10));
-    tiles[(0, 0)] = crate::Tile::Wall;
+    let tiles = crate::MapTiles::gen_v1(IVec2::new(20, 10), 0.1, 0x42707564210);
+    //let a = tiles.astar(IVec2::new(1, 1), IVec2::new(7, 18)).unwrap();
+    //let astar = AStarBundle::new(&materials, &mut meshes, a);
+    //commands.spawn(astar);
 
-    let map = crate::MapBundle::new_from_tiles(&materials, &mut meshes, tiles);
+    let map = crate::MapBundle::new_from_tiles(&materials, &mut meshes, tiles, Vec2::new(0.0, 0.0));
+    commands.spawn(map);
+
+    let tiles = crate::MapTiles::gen_v1(IVec2::new(20, 10), 0.5, 0x754620);
+    let map =
+        crate::MapBundle::new_from_tiles(&materials, &mut meshes, tiles, Vec2::new(0.0, 11.0));
+    commands.spawn(map);
+
+    let tiles = crate::MapTiles::gen_v1(IVec2::new(20, 10), 1.0, 0x7546205420);
+    let map =
+        crate::MapBundle::new_from_tiles(&materials, &mut meshes, tiles, Vec2::new(0.0, -11.0));
     commands.spawn(map);
 }
 
@@ -110,7 +122,7 @@ pub fn display_events(
     q_bullet: Query<&crate::Bullet>,
 ) {
     for event in collision_events.iter() {
-        println!("Received collision event: {event:?}");
+        //println!("Received collision event: {event:?}");
         if let CollisionEvent::Started(a, b, _flags) = event {
             if let Ok(((tank, tank_transform), bullet, tank_entity, bullet_entity)) =
                 query_dual_entities(*a, *b, &q_tank, &q_bullet)

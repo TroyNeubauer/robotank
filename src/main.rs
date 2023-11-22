@@ -14,7 +14,7 @@ mod map;
 pub use map::*;
 
 fn main() {
-    let debug_physics = true;
+    let debug_physics = false;
     let mut app = App::new();
     app.add_plugins((DefaultPlugins, TanksPlugin))
         .add_plugins((RapierPhysicsPlugin::<NoUserData>::default().with_physics_scale(1.0),))
